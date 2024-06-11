@@ -7,6 +7,7 @@ class PlayScene extends Phaser.Scene {
         this.shipPlacements = {1: [], 2: []}; // Track ship placements for both players
         this.shipOrientation = 'horizontal'; // Default orientation
         this.tempShip = null; // Temporary ship for placement
+        this.gameStarted = false; // Flag to indicate the game has started
     }
 
     preload() {
@@ -40,7 +41,11 @@ class PlayScene extends Phaser.Scene {
                 ).setStrokeStyle(2, 0x0000ff, 1);
                 cell.setInteractive();
                 cell.on('pointerdown', () => {
-                    this.placeTemporaryShip(offsetX, offsetY, i, j, cellSize);
+                    if (this.gameStarted) {
+                        this.dropBomb(offsetX, i, j);
+                    } else {
+                        this.placeTemporaryShip(offsetX, offsetY, i, j, cellSize);
+                    }
                 });
             }
         }
@@ -129,6 +134,60 @@ class PlayScene extends Phaser.Scene {
     }
 
     startGame() {
-        // Initialize game logic here
+        this.gameStarted = true;
+        this.currentPlayer = 1; // Player 1 starts the game
+        alert("Player 1 starts the game. Drop a bomb on Player 2's grid.");
+    }
+
+    dropBomb(offsetX, gridX, gridY) {
+        let playerToAttack = this.currentPlayer === 1 ? 2 : 1;
+        let gridToCheck = this.shipPlacements[playerToAttack];
+        let hit = false;
+
+        for (let ship of gridToCheck) {
+            let shipCells = [];
+            if (ship.orientation === 'horizontal') {
+                for (let i = 0; i < ship.length; i++) {
+                    shipCells.push({ x: ship.x + i, y: ship.y });
+                }
+            } else {
+                for (let i = 0; i < ship.length; i++) {
+                    shipCells.push({ x: ship.x, y: ship.y + i });
+                }
+            }
+
+            for (let cell of shipCells) {
+                if (cell.x === gridX && cell.y === gridY) {
+                    hit = true;
+                    break;
+                }
+            }
+
+            if (hit) break;
+        }
+
+        let cellSize = 60;
+        let x = offsetX + gridX * cellSize;
+        let y = 50 + gridY * cellSize; // Fixed offsetY for both grids
+
+        if (hit) {
+            this.add.rectangle(x, y, cellSize, cellSize, 0xff0000).setStrokeStyle(2, 0x000000, 1);
+            alert(`Player ${this.currentPlayer} hit a ship! They get to go again.`);
+        } else {
+            this.add.rectangle(x, y, cellSize, cellSize, 0xffa500).setStrokeStyle(2, 0x000000, 1);
+            alert(`Player ${this.currentPlayer} missed!`);
+            this.currentPlayer = playerToAttack; // Switch turns
+            alert(`It's Player ${this.currentPlayer}'s turn to drop bombs.`);
+        }
     }
 }
+
+const config = {
+    type: Phaser.AUTO,
+    width: 1200,
+    height: 800,
+    scene: PlayScene,
+    backgroundColor: '#b0e0e6',
+};
+
+const game = new Phaser.Game(config);
