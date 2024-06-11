@@ -10,6 +10,7 @@ class PlayScene extends Phaser.Scene {
         this.gameStarted = false; // Flag to indicate the game has started
         this.useTorpedo = false; // Flag to indicate torpedo use
         this.useVerticalTorpedo = false; // Flag to indicate vertical torpedo use
+        this.useMegaTorpedo = false; // Flag to indicate mega torpedo use
     }
 
     preload() {
@@ -21,8 +22,10 @@ class PlayScene extends Phaser.Scene {
         this.drawGrid(700, 50, "Player 2");
         this.addTorpedoButton(50, 700, 1);
         this.addVerticalTorpedoButton(50, 730, 1); // Add vertical torpedo button for Player 1
+        this.addMegaTorpedoButton(50, 760, 1); // Add mega torpedo button for Player 1
         this.addTorpedoButton(700, 700, 2);
         this.addVerticalTorpedoButton(700, 730, 2); // Add vertical torpedo button for Player 2
+        this.addMegaTorpedoButton(700, 760, 2); // Add mega torpedo button for Player 2
         this.input.keyboard.on('keydown-R', this.toggleOrientation, this); // Handle 'R' key for rotation
         this.input.keyboard.on('keydown-ENTER', this.confirmShipPlacement, this); // Handle 'ENTER' key for confirming ship placement
     }
@@ -75,6 +78,17 @@ class PlayScene extends Phaser.Scene {
                 if (this.currentPlayer === player) {
                     this.useVerticalTorpedo = true;
                     alert(`Player ${player} will use a vertical torpedo on their next attack.`);
+                }
+            });
+    }
+
+    addMegaTorpedoButton(offsetX, offsetY, player) {
+        let button = this.add.text(offsetX, offsetY, 'Use Mega Torpedo', { font: '20px Arial', fill: '#ff0000' })
+            .setInteractive()
+            .on('pointerdown', () => {
+                if (this.currentPlayer === player) {
+                    this.useMegaTorpedo = true;
+                    alert(`Player ${player} will use a mega torpedo on their next attack.`);
                 }
             });
     }
@@ -218,6 +232,14 @@ class PlayScene extends Phaser.Scene {
                 dropBombOnCell(gridX, j);
             }
             this.useVerticalTorpedo = false;
+        } else if (this.useMegaTorpedo) {
+            for (let i = 0; i < 10; i++) {
+                dropBombOnCell(i, gridY);
+            }
+            for (let j = 0; j < 10; j++) {
+                dropBombOnCell(gridX, j);
+            }
+            this.useMegaTorpedo = false;
         } else {
             dropBombOnCell(gridX, gridY);
         }
