@@ -8,6 +8,7 @@ class PlayScene extends Phaser.Scene {
         this.shipOrientation = 'horizontal'; // Default orientation
         this.tempShip = null; // Temporary ship for placement
         this.gameStarted = false; // Flag to indicate the game has started
+        this.useTorpedo = false; // Flag to indicate torpedo use
     }
 
     preload() {
@@ -17,6 +18,8 @@ class PlayScene extends Phaser.Scene {
     create() {
         this.drawGrid(50, 50, "Player 1");
         this.drawGrid(700, 50, "Player 2");
+        this.addTorpedoButton(50, 700, 1);
+        this.addTorpedoButton(700, 700, 2);
         this.input.keyboard.on('keydown-R', this.toggleOrientation, this); // Handle 'R' key for rotation
         this.input.keyboard.on('keydown-ENTER', this.confirmShipPlacement, this); // Handle 'ENTER' key for confirming ship placement
     }
@@ -49,6 +52,17 @@ class PlayScene extends Phaser.Scene {
                 });
             }
         }
+    }
+
+    addTorpedoButton(offsetX, offsetY, player) {
+        let button = this.add.text(offsetX, offsetY, 'Use Torpedo', { font: '20px Arial', fill: '#ff0000' })
+            .setInteractive()
+            .on('pointerdown', () => {
+                if (this.currentPlayer === player) {
+                    this.useTorpedo = true;
+                    alert(`Player ${player} will use a torpedo on their next attack.`);
+                }
+            });
     }
 
     toggleOrientation() {
@@ -144,37 +158,54 @@ class PlayScene extends Phaser.Scene {
         let gridToCheck = this.shipPlacements[playerToAttack];
         let hit = false;
 
-        for (let ship of gridToCheck) {
-            let shipCells = [];
-            if (ship.orientation === 'horizontal') {
-                for (let i = 0; i < ship.length; i++) {
-                    shipCells.push({ x: ship.x + i, y: ship.y });
+        const dropBombOnCell = (x, y) => {
+            let hitInCurrentCell = false;
+            for (let ship of gridToCheck) {
+                let shipCells = [];
+                if (ship.orientation === 'horizontal') {
+                    for (let i = 0; i < ship.length; i++) {
+                        shipCells.push({ x: ship.x + i, y: ship.y });
+                    }
+                } else {
+                    for (let i = 0; i < ship.length; i++) {
+                        shipCells.push({ x: ship.x, y: ship.y + i });
+                    }
                 }
+
+                for (let cell of shipCells) {
+                    if (cell.x === x && cell.y === y) {
+                        hit = true;
+                        hitInCurrentCell = true;
+                        break;
+                    }
+                }
+
+                if (hitInCurrentCell) break;
+            }
+
+            let cellSize = 60;
+            let bombX = offsetX + x * cellSize;
+            let bombY = 50 + y * cellSize; // Fixed offsetY for both grids
+
+            if (hitInCurrentCell) {
+                this.add.rectangle(bombX, bombY, cellSize, cellSize, 0xff0000).setStrokeStyle(2, 0x000000, 1);
             } else {
-                for (let i = 0; i < ship.length; i++) {
-                    shipCells.push({ x: ship.x, y: ship.y + i });
-                }
+                this.add.rectangle(bombX, bombY, cellSize, cellSize, 0xffa500).setStrokeStyle(2, 0x000000, 1);
             }
+        };
 
-            for (let cell of shipCells) {
-                if (cell.x === gridX && cell.y === gridY) {
-                    hit = true;
-                    break;
-                }
+        if (this.useTorpedo) {
+            for (let i = 0; i < 10; i++) {
+                dropBombOnCell(i, gridY);
             }
-
-            if (hit) break;
+            this.useTorpedo = false;
+        } else {
+            dropBombOnCell(gridX, gridY);
         }
 
-        let cellSize = 60;
-        let x = offsetX + gridX * cellSize;
-        let y = 50 + gridY * cellSize; // Fixed offsetY for both grids
-
         if (hit) {
-            this.add.rectangle(x, y, cellSize, cellSize, 0xff0000).setStrokeStyle(2, 0x000000, 1);
             alert(`Player ${this.currentPlayer} hit a ship! They get to go again.`);
         } else {
-            this.add.rectangle(x, y, cellSize, cellSize, 0xffa500).setStrokeStyle(2, 0x000000, 1);
             alert(`Player ${this.currentPlayer} missed!`);
             this.currentPlayer = playerToAttack; // Switch turns
             alert(`It's Player ${this.currentPlayer}'s turn to drop bombs.`);
