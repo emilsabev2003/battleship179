@@ -9,6 +9,7 @@ class PlayScene extends Phaser.Scene {
         this.tempShip = null; // Temporary ship for placement
         this.gameStarted = false; // Flag to indicate the game has started
         this.useTorpedo = false; // Flag to indicate torpedo use
+        this.useVerticalTorpedo = false; // Flag to indicate vertical torpedo use
     }
 
     preload() {
@@ -19,7 +20,9 @@ class PlayScene extends Phaser.Scene {
         this.drawGrid(50, 50, "Player 1");
         this.drawGrid(700, 50, "Player 2");
         this.addTorpedoButton(50, 700, 1);
+        this.addVerticalTorpedoButton(50, 730, 1); // Add vertical torpedo button for Player 1
         this.addTorpedoButton(700, 700, 2);
+        this.addVerticalTorpedoButton(700, 730, 2); // Add vertical torpedo button for Player 2
         this.input.keyboard.on('keydown-R', this.toggleOrientation, this); // Handle 'R' key for rotation
         this.input.keyboard.on('keydown-ENTER', this.confirmShipPlacement, this); // Handle 'ENTER' key for confirming ship placement
     }
@@ -61,6 +64,17 @@ class PlayScene extends Phaser.Scene {
                 if (this.currentPlayer === player) {
                     this.useTorpedo = true;
                     alert(`Player ${player} will use a torpedo on their next attack.`);
+                }
+            });
+    }
+
+    addVerticalTorpedoButton(offsetX, offsetY, player) {
+        let button = this.add.text(offsetX, offsetY, 'Use Vertical Torpedo', { font: '20px Arial', fill: '#ff0000' })
+            .setInteractive()
+            .on('pointerdown', () => {
+                if (this.currentPlayer === player) {
+                    this.useVerticalTorpedo = true;
+                    alert(`Player ${player} will use a vertical torpedo on their next attack.`);
                 }
             });
     }
@@ -199,6 +213,11 @@ class PlayScene extends Phaser.Scene {
                 dropBombOnCell(i, gridY);
             }
             this.useTorpedo = false;
+        } else if (this.useVerticalTorpedo) {
+            for (let j = 0; j < 10; j++) {
+                dropBombOnCell(gridX, j);
+            }
+            this.useVerticalTorpedo = false;
         } else {
             dropBombOnCell(gridX, gridY);
         }
