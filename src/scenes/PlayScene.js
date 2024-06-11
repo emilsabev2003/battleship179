@@ -11,6 +11,7 @@ class PlayScene extends Phaser.Scene {
         this.useTorpedo = false; // Flag to indicate torpedo use
         this.useVerticalTorpedo = false; // Flag to indicate vertical torpedo use
         this.useMegaTorpedo = false; // Flag to indicate mega torpedo use
+        this.useTorpedoX = false; // Flag to indicate torpedo X use
     }
 
     preload() {
@@ -18,14 +19,16 @@ class PlayScene extends Phaser.Scene {
     }
 
     create() {
-        this.drawGrid(50, 50, "Player 1");
-        this.drawGrid(700, 50, "Player 2");
+        this.drawGrid(50, 150, "Player 1");
+        this.drawGrid(700, 150, "Player 2");
         this.addTorpedoButton(50, 700, 1);
         this.addVerticalTorpedoButton(50, 730, 1); // Add vertical torpedo button for Player 1
         this.addMegaTorpedoButton(50, 760, 1); // Add mega torpedo button for Player 1
+        this.addTorpedoXButton(50, 790, 1); // Add torpedo X button for Player 1
         this.addTorpedoButton(700, 700, 2);
         this.addVerticalTorpedoButton(700, 730, 2); // Add vertical torpedo button for Player 2
         this.addMegaTorpedoButton(700, 760, 2); // Add mega torpedo button for Player 2
+        this.addTorpedoXButton(700, 790, 2); // Add torpedo X button for Player 2
         this.input.keyboard.on('keydown-R', this.toggleOrientation, this); // Handle 'R' key for rotation
         this.input.keyboard.on('keydown-ENTER', this.confirmShipPlacement, this); // Handle 'ENTER' key for confirming ship placement
     }
@@ -61,7 +64,7 @@ class PlayScene extends Phaser.Scene {
     }
 
     addTorpedoButton(offsetX, offsetY, player) {
-        let button = this.add.text(offsetX, offsetY, 'Use Torpedo', { font: '20px Arial', fill: '#ff0000' })
+        let button = this.add.text(offsetX, offsetY+120, 'Use Horizontal Torpedo', { font: '20px Arial', fill: '#ff0000' })
             .setInteractive()
             .on('pointerdown', () => {
                 if (this.currentPlayer === player) {
@@ -89,6 +92,17 @@ class PlayScene extends Phaser.Scene {
                 if (this.currentPlayer === player) {
                     this.useMegaTorpedo = true;
                     alert(`Player ${player} will use a mega torpedo on their next attack.`);
+                }
+            });
+    }
+
+    addTorpedoXButton(offsetX, offsetY, player) {
+        let button = this.add.text(offsetX, offsetY, 'Use Torpedo X', { font: '20px Arial', fill: '#ff0000' })
+            .setInteractive()
+            .on('pointerdown', () => {
+                if (this.currentPlayer === player) {
+                    this.useTorpedoX = true;
+                    alert(`Player ${player} will use a torpedo X on their next attack.`);
                 }
             });
     }
@@ -240,6 +254,22 @@ class PlayScene extends Phaser.Scene {
                 dropBombOnCell(gridX, j);
             }
             this.useMegaTorpedo = false;
+        } else if (this.useTorpedoX) {
+            for (let i = 0; i < 10; i++) {
+                if (gridX + i < 10 && gridY + i < 10) {
+                    dropBombOnCell(gridX + i, gridY + i);
+                }
+                if (gridX - i >= 0 && gridY - i >= 0) {
+                    dropBombOnCell(gridX - i, gridY - i);
+                }
+                if (gridX + i < 10 && gridY - i >= 0) {
+                    dropBombOnCell(gridX + i, gridY - i);
+                }
+                if (gridX - i >= 0 && gridY + i < 10) {
+                    dropBombOnCell(gridX - i, gridY + i);
+                }
+            }
+            this.useTorpedoX = false;
         } else {
             dropBombOnCell(gridX, gridY);
         }
@@ -254,12 +284,3 @@ class PlayScene extends Phaser.Scene {
     }
 }
 
-const config = {
-    type: Phaser.AUTO,
-    width: 1200,
-    height: 800,
-    scene: PlayScene,
-    backgroundColor: '#b0e0e6',
-};
-
-const game = new Phaser.Game(config);
