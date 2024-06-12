@@ -31,6 +31,9 @@ class PlayScene extends Phaser.Scene {
         this.load.image("ship3rotated", "./assets/3x1_ship_rotated.png");
         this.load.image("ship4rotated", "./assets/3x1_ship_rotated.png");
         this.load.image("ship5rotated", "./assets/2x1_ship_rotated.png");
+
+        this.load.audio("hit_sound", "./assets/hit.mp3");
+        this.load.audio("miss_sound", "./assets/miss.mp3");
     }
 
     create() {
@@ -65,6 +68,11 @@ class PlayScene extends Phaser.Scene {
 
         // Set gameStarted flag to false initially
         this.gameStarted = false;
+
+        this.hitSound = this.sound.add('hit_sound');
+        this.missSound = this.sound.add('miss_sound');
+
+
     }
     
 
@@ -317,9 +325,11 @@ class PlayScene extends Phaser.Scene {
             let bombY = 50 + y * cellSize; // Fixed offsetY for both grids
     
             if (hitInCurrentCell) {
+                this.hitSound.play();
                 this.add.rectangle(bombX, bombY, cellSize, cellSize, 0xff0000).setStrokeStyle(2, 0x000000, 1);
                 this.hits[this.currentPlayer]++;
             } else {
+                this.missSound.play();
                 this.add.rectangle(bombX, bombY, cellSize, cellSize, 0xffa500).setStrokeStyle(2, 0x000000, 1);
             }
         };
