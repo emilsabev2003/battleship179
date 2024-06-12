@@ -79,7 +79,7 @@ class PlayScene extends Phaser.Scene {
     
 
     update() {
-        // Game logic updates go here
+        
     }
 
     drawGrid(offsetX, offsetY, playerLabel) {
