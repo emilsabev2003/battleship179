@@ -1,31 +1,31 @@
-
-
 class PlayScene extends Phaser.Scene {
     constructor() {
         super("PlayScene");
-        this.ships = [5, 4, 3, 3, 2]; // Sizes of ships
-        this.currentShip = 0; // Index of the current ship to place
-        this.currentPlayer = 1; // Current player placing ships
-        this.shipPlacements = {1: [], 2: []}; // Track ship placements for both players
-        this.shipOrientation = 'horizontal'; // Default orientation
-        this.tempShip = null; // Temporary ship for placement
-        this.gameStarted = false; // Flag to indicate the game has started
-        this.useTorpedo = false; // Flag to indicate torpedo use
-        this.useVerticalTorpedo = false; // Flag to indicate vertical torpedo use
-        this.useMegaTorpedo = false; // Flag to indicate mega torpedo use
-        this.useTorpedoX = false; // Flag to indicate torpedo X use
-    
-        this.hits = {1: 0, 2: 0}; // Track hits for both players
+        this.ships = [5, 4, 3, 3, 2];
+        this.currentShip = 0;
+        this.currentPlayer = 1;
+        this.shipPlacements = {1: [], 2: []};
+        this.shipSprites = {1: [], 2: []};
+        this.shipOrientation = 'horizontal';
+        this.tempShip = null;
+        this.gameStarted = false;
+        this.useTorpedo = false;
+        this.useVerticalTorpedo = false;
+        this.useMegaTorpedo = false;
+        this.useTorpedoX = false;
+        this.hits = {1: 0, 2: 0};
+        this.player1Ships = [];
+        this.player2Ships = [];
+        this.shipPlacementMask = null; // Added variable for ship placement mask
     }
     
-
     preload() {
+        // Preload ship images
         this.load.image("ship1", "./assets/5x1_ship.png");
         this.load.image("ship2", "./assets/4x1_ship.png");
         this.load.image("ship3", "./assets/3x1_ship.png");
         this.load.image("ship4", "./assets/3x1_ship.png");
         this.load.image("ship5", "./assets/2x1_ship.png");
-
         this.load.image("ship1rotated", "./assets/5x1_ship_rotated.png");
         this.load.image("ship2rotated", "./assets/4x1_ship_rotated.png");
         this.load.image("ship3rotated", "./assets/3x1_ship_rotated.png");
@@ -34,32 +34,41 @@ class PlayScene extends Phaser.Scene {
     }
 
     create() {
-        this.drawGrid(50, 50, "Player 1");
-        this.drawGrid(700, 50, "Player 2");
+        // Draw grids for both players
+        this.grid1 = this.drawGrid(50, 50, "Player 1");
+        this.grid2 = this.drawGrid(700, 50, "Player 2");
+
+        // Add torpedo buttons for both players
         this.addTorpedoButton(50, 700, 1);
-        this.addVerticalTorpedoButton(50, 730, 1); // Add vertical torpedo button for Player 1
-        this.addMegaTorpedoButton(50, 760, 1); // Add mega torpedo button for Player 1
-        this.addTorpedoXButton(50, 790, 1); // Add torpedo X button for Player 1
+        this.addVerticalTorpedoButton(50, 730, 1);
+        this.addMegaTorpedoButton(50, 760, 1);
+        this.addTorpedoXButton(50, 790, 1);
         this.addTorpedoButton(700, 700, 2);
-        this.addVerticalTorpedoButton(700, 730, 2); // Add vertical torpedo button for Player 2
-        this.addMegaTorpedoButton(700, 760, 2); // Add mega torpedo button for Player 2
-        this.addTorpedoXButton(700, 790, 2); // Add torpedo X button for Player 2
-        this.input.keyboard.on('keydown-R', this.toggleOrientation, this); // Handle 'R' key for rotation
-        this.input.keyboard.on('keydown-ENTER', this.confirmShipPlacement, this); // Handle 'ENTER' key for confirming ship placement
+        this.addVerticalTorpedoButton(700, 730, 2);
+        this.addMegaTorpedoButton(700, 760, 2);
+        this.addTorpedoXButton(700, 790, 2);
 
-        // Creating masks for player grids
-        this.player1Mask = this.add.graphics().setVisible(false).setDepth(1); // Set depth to 1
-        this.player1Mask.fillStyle(0x000000);
-        this.player1Mask.fillRect(0, 0, 650, 650);
+        // Register keyboard events
+        this.input.keyboard.on('keydown-R', this.toggleOrientation, this);
+        this.input.keyboard.on('keydown-ENTER', this.confirmShipPlacement, this);
 
-        this.player2Mask = this.add.graphics().setVisible(false).setDepth(1); // Set depth to 1
-        this.player2Mask.fillStyle(0x000000);
-        this.player2Mask.fillRect(650, 25, 650, 650);
+        // Create empty grid overlays
+        this.player1GridOverlay = this.createEmptyGrid(50, 50).setVisible(false); // Initially hidden
+        this.player2GridOverlay = this.createEmptyGrid(700, 50).setVisible(true); // Initially visible
 
-        // Applying masks to grids
-        this.grid1.setMask(this.player1Mask.createGeometryMask());
-        this.grid2.setMask(this.player2Mask.createGeometryMask());
+        // Hide Player 2's ships at the start of the game
+        this.hideShips(2);
+
+        // Create a black mask for ship placement phase
+        this.shipPlacementMask = this.add.rectangle(50, 50, 600, 600, 0x000000, 0.7).setOrigin(0);
+        this.shipPlacementMask.setVisible(false);
+
+        // Set gameStarted flag to false initially
+        this.gameStarted = false;
     }
+    
+
+    
 
     update() {
         // Game logic updates go here
@@ -68,13 +77,14 @@ class PlayScene extends Phaser.Scene {
     drawGrid(offsetX, offsetY, playerLabel) {
         const gridSize = 10;
         const cellSize = 60;
-        this.add.text(offsetX, offsetY - 60, playerLabel, { font: '24px Arial', fill: '#000000' });
+        const gridContainer = this.add.container(offsetX, offsetY);
+        this.add.text(0, -60, playerLabel, { font: '24px Arial', fill: '#000000' }, gridContainer);
 
         for (let i = 0; i < gridSize; i++) {
             for (let j = 0; j < gridSize; j++) {
                 let cell = this.add.rectangle(
-                    offsetX + i * cellSize,
-                    offsetY + j * cellSize,
+                    i * cellSize,
+                    j * cellSize,
                     cellSize,
                     cellSize,
                     0xFFFFFF
@@ -87,63 +97,90 @@ class PlayScene extends Phaser.Scene {
                         this.placeTemporaryShip(offsetX, offsetY, i, j, cellSize);
                     }
                 });
+                gridContainer.add(cell);
             }
         }
+        return gridContainer;
+    }
+
+    createEmptyGrid(offsetX, offsetY) {
+        const gridSize = 10;
+        const cellSize = 60;
+        const gridContainer = this.add.container(offsetX, offsetY);
+
+        for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+                let cell = this.add.rectangle(
+                    i * cellSize,
+                    j * cellSize,
+                    cellSize,
+                    cellSize,
+                    0xFFFFFF
+                ).setStrokeStyle(2, 0x0000ff, 1);
+                gridContainer.add(cell);
+            }
+        }
+        return gridContainer;
     }
 
     addTorpedoButton(offsetX, offsetY, player) {
         let button = this.add.text(offsetX, offsetY + 120, 'Use Horizontal Torpedo', { font: '20px Arial', fill: '#ff0000' })
             .setInteractive()
             .on('pointerdown', () => {
-                if (this.currentPlayer === player) {
+                if (this.currentPlayer === player && !this.useTorpedo) { // Check if torpedo is not already used
                     this.useTorpedo = true;
                     alert(`Player ${player} will use a torpedo on their next attack.`);
+                    button.disableInteractive(); // Disable the button after use
                 }
             });
     }
-
+    
     addVerticalTorpedoButton(offsetX, offsetY, player) {
         let button = this.add.text(offsetX, offsetY, 'Use Vertical Torpedo', { font: '20px Arial', fill: '#ff0000' })
             .setInteractive()
             .on('pointerdown', () => {
-                if (this.currentPlayer === player) {
+                if (this.currentPlayer === player && !this.useVerticalTorpedo) { // Check if vertical torpedo is not already used
                     this.useVerticalTorpedo = true;
                     alert(`Player ${player} will use a vertical torpedo on their next attack.`);
+                    button.disableInteractive(); // Disable the button after use
                 }
             });
     }
-
+    
     addMegaTorpedoButton(offsetX, offsetY, player) {
         let button = this.add.text(offsetX, offsetY, 'Use Mega Torpedo', { font: '20px Arial', fill: '#ff0000' })
             .setInteractive()
             .on('pointerdown', () => {
-                if (this.currentPlayer === player) {
+                if (this.currentPlayer === player && !this.useMegaTorpedo) { // Check if mega torpedo is not already used
                     this.useMegaTorpedo = true;
                     alert(`Player ${player} will use a mega torpedo on their next attack.`);
+                    button.disableInteractive(); // Disable the button after use
                 }
             });
     }
-
+    
     addTorpedoXButton(offsetX, offsetY, player) {
         let button = this.add.text(offsetX, offsetY, 'Use Torpedo X', { font: '20px Arial', fill: '#ff0000' })
             .setInteractive()
             .on('pointerdown', () => {
-                if (this.currentPlayer === player) {
+                if (this.currentPlayer === player && !this.useTorpedoX) { // Check if torpedo X is not already used
                     this.useTorpedoX = true;
                     alert(`Player ${player} will use a torpedo X on their next attack.`);
+                    button.disableInteractive(); // Disable the button after use
                 }
             });
     }
+    
+    
 
     toggleOrientation() {
         if (this.tempShip) {
             this.shipOrientation = this.shipOrientation === 'horizontal' ? 'vertical' : 'horizontal';
-            this.drawTemporaryShip(this.tempShip.gridX, this.tempShip.gridY); // Only update the temp ship's visual
+            this.drawTemporaryShip(this.tempShip.gridX, this.tempShip.gridY);
         }
     }
 
     placeTemporaryShip(offsetX, offsetY, gridX, gridY, cellSize) {
-        // Clear previous temporary ship if any
         if (this.tempShip && this.tempShip.rect) {
             this.tempShip.rect.destroy();
         }
@@ -153,28 +190,12 @@ class PlayScene extends Phaser.Scene {
 
     drawTemporaryShip(gridX, gridY) {
         if (this.tempShip.rect) {
-            this.tempShip.rect.destroy(); // Ensure to clear previous temporary ship visualization
+            this.tempShip.rect.destroy();
         }
-
-        let length = this.ships[this.currentShip];
-        let width = this.shipOrientation === 'horizontal' ? length : 1;
-        let height = this.shipOrientation === 'vertical' ? length : 1;
-        let x = this.tempShip.offsetX + gridX * this.tempShip.cellSize;
-        let y = this.tempShip.offsetY + gridY * this.tempShip.cellSize;
-
-        // Draw new temporary ship
-        this.tempShip.rect = this.add.rectangle(
-            x + (this.shipOrientation === 'horizontal' ? (this.tempShip.cellSize * (length - 1)) / 2 : 0),
-            y + (this.shipOrientation === 'vertical' ? (this.tempShip.cellSize * (length - 1)) / 2 : 0),
-            this.tempShip.cellSize * width,
-            this.tempShip.cellSize * height,
-            0xaaaaaa
-        ).setStrokeStyle(2, 0x000000, 1).setOrigin(0.5);
     }
 
     confirmShipPlacement() {
         if (this.tempShip) {
-            // Add the ship to the ship placements list and draw it permanently
             this.shipPlacements[this.currentPlayer].push({
                 x: this.tempShip.gridX,
                 y: this.tempShip.gridY,
@@ -184,17 +205,21 @@ class PlayScene extends Phaser.Scene {
 
             this.drawPermanentShip();
 
-            // Clear temporary ship and prepare for next placement or switch players
             this.tempShip = null;
             this.currentShip++;
             if (this.currentShip >= this.ships.length) {
                 this.currentShip = 0;
                 if (this.currentPlayer === 1) {
                     alert("Player 1 has placed all ships. Player 2's turn to place ships.");
-                    this.currentPlayer = 2; // Switch to Player 2
+                    this.currentPlayer = 2;
+                    // Show ship placement mask over Player 1's grid
+                    this.shipPlacementMask.setVisible(true);
+                    // Hide Player 1's ships during Player 2's turn
+                    this.hideShips(1);
                 } else {
                     alert("Player 2 has placed all ships. Start the game.");
-                    this.startGame(); // Proceed to start the game
+                    this.shipPlacementMask.setVisible(false);
+                    this.startGame();
                 }
             }
         }
@@ -206,33 +231,54 @@ class PlayScene extends Phaser.Scene {
         let x = this.tempShip.offsetX + this.tempShip.gridX * this.tempShip.cellSize - 30;
         let y = this.tempShip.offsetY + this.tempShip.gridY * this.tempShip.cellSize - 30;
         let spriteKey = `ship${this.currentShip + 1}`;
-
+    
         // Select the correct sprite key based on the ship orientation
         if (this.shipOrientation === 'vertical') {
             spriteKey += 'rotated';
         }
-
+    
         let sprite = this.add.sprite(x, y, spriteKey).setOrigin(0, 0);
-
+    
         if (this.shipOrientation === 'horizontal') {
             sprite.setDisplaySize(length * this.tempShip.cellSize, this.tempShip.cellSize);
         } else {
             sprite.setDisplaySize(this.tempShip.cellSize, length * this.tempShip.cellSize);
         }
+    
+        // Store the sprite in the corresponding player's array
+        if (this.currentPlayer === 1) {
+            this.player1Ships.push(sprite);
+        } else {
+            this.player2Ships.push(sprite);
+        }
     }
 
+    hideShips(player) {
+        let ships = player === 1 ? this.player1Ships : this.player2Ships;
+        ships.forEach(ship => ship.setVisible(false));
+    }
+    
+    showShips(player) {
+        let ships = player === 1 ? this.player1Ships : this.player2Ships;
+        ships.forEach(ship => ship.setVisible(true));
+    }
+    
     startGame() {
         this.gameStarted = true;
         this.currentPlayer = 1; // Player 1 starts the game
         alert("Player 1 starts the game. Drop a bomb on Player 2's grid.");
+    
+        // Update masks and visibility of ships based on the current player
+        this.updateTurn();
+    }
 
-        // Update masks to reveal current player's grid and hide opponent's grid
+    updateGridVisibility() {
         if (this.currentPlayer === 1) {
-            this.player1Mask.setVisible(false);
-            this.player2Mask.setVisible(true);
+            this.player1GridOverlay.setVisible(false);
+            this.player2GridOverlay.setVisible(true);
         } else {
-            this.player1Mask.setVisible(true);
-            this.player2Mask.setVisible(false);
+            this.player1GridOverlay.setVisible(true);
+            this.player2GridOverlay.setVisible(false);
         }
     }
 
@@ -328,14 +374,23 @@ class PlayScene extends Phaser.Scene {
         if (this.hits[this.currentPlayer] >= 17) {
             this.scene.start('GameOverScene', { winner: this.currentPlayer });
         } else {
-            if (this.currentPlayer === 1) {
-                this.player1Mask.setVisible(false);
-                this.player2Mask.setVisible(true);
-            } else {
-                this.player1Mask.setVisible(true);
-                this.player2Mask.setVisible(false);
-            }
+            this.updateTurn();
         }
     }
+
+    updateTurn() {
+        if (this.currentPlayer === 1) {
+            this.player1GridOverlay.setVisible(false);
+            this.player2GridOverlay.setVisible(true);
+            this.hideShips(2); // Hide Player 2's ships
+            this.showShips(1); // Show Player 1's ships
+        } else {
+            this.player1GridOverlay.setVisible(true);
+            this.player2GridOverlay.setVisible(false);
+            this.hideShips(1); // Hide Player 1's ships
+            this.showShips(2); // Show Player 2's ships
+        }
+    }
+    
     
 }
