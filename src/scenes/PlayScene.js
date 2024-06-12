@@ -15,7 +15,17 @@ class PlayScene extends Phaser.Scene {
     }
 
     preload() {
-        // Load any assets here if necessary
+        this.load.image("ship1", "./assets/5x1_ship.png");
+        this.load.image("ship2", "./assets/4x1_ship.png");
+        this.load.image("ship3", "./assets/3x1_ship.png");
+        this.load.image("ship4", "./assets/3x1_ship.png");
+        this.load.image("ship5", "./assets/2x1_ship.png");
+
+        this.load.image("ship1rotated", "./assets/5x1_ship_rotated.png");
+        this.load.image("ship2rotated", "./assets/4x1_ship_rotated.png");
+        this.load.image("ship3rotated", "./assets/3x1_ship_rotated.png");
+        this.load.image("ship4rotated", "./assets/3x1_ship_rotated.png");
+        this.load.image("ship5rotated", "./assets/2x1_ship_rotated.png");
     }
 
     create() {
@@ -64,7 +74,7 @@ class PlayScene extends Phaser.Scene {
     }
 
     addTorpedoButton(offsetX, offsetY, player) {
-        let button = this.add.text(offsetX, offsetY+120, 'Use Horizontal Torpedo', { font: '20px Arial', fill: '#ff0000' })
+        let button = this.add.text(offsetX, offsetY + 120, 'Use Horizontal Torpedo', { font: '20px Arial', fill: '#ff0000' })
             .setInteractive()
             .on('pointerdown', () => {
                 if (this.currentPlayer === player) {
@@ -175,18 +185,22 @@ class PlayScene extends Phaser.Scene {
     drawPermanentShip() {
         // Draw the confirmed ship permanently on the grid using the latest data
         let length = this.ships[this.currentShip];
-        let width = this.shipOrientation === 'horizontal' ? length : 1;
-        let height = this.shipOrientation === 'vertical' ? length : 1;
-        let x = this.tempShip.offsetX + this.tempShip.gridX * this.tempShip.cellSize;
-        let y = this.tempShip.offsetY + this.tempShip.gridY * this.tempShip.cellSize;
+        let x = this.tempShip.offsetX + this.tempShip.gridX * this.tempShip.cellSize - 30;
+        let y = this.tempShip.offsetY + this.tempShip.gridY * this.tempShip.cellSize - 30;
+        let spriteKey = `ship${this.currentShip + 1}`;
 
-        this.add.rectangle(
-            x + (this.shipOrientation === 'horizontal' ? (this.tempShip.cellSize * (length - 1)) / 2 : 0),
-            y + (this.shipOrientation === 'vertical' ? (this.tempShip.cellSize * (length - 1)) / 2 : 0),
-            this.tempShip.cellSize * width,
-            this.tempShip.cellSize * height,
-            0xaaaaaa
-        ).setStrokeStyle(2, 0x000000, 1).setOrigin(0.5);
+        // Select the correct sprite key based on the ship orientation
+        if (this.shipOrientation === 'vertical') {
+            spriteKey += 'rotated';
+        }
+
+        let sprite = this.add.sprite(x, y, spriteKey).setOrigin(0, 0);
+
+        if (this.shipOrientation === 'horizontal') {
+            sprite.setDisplaySize(length * this.tempShip.cellSize, this.tempShip.cellSize);
+        } else {
+            sprite.setDisplaySize(this.tempShip.cellSize, length * this.tempShip.cellSize);
+        }
     }
 
     startGame() {
