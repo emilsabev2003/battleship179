@@ -1,3 +1,5 @@
+
+
 class PlayScene extends Phaser.Scene {
     constructor() {
         super("PlayScene");
@@ -41,6 +43,19 @@ class PlayScene extends Phaser.Scene {
         this.addTorpedoXButton(700, 790, 2); // Add torpedo X button for Player 2
         this.input.keyboard.on('keydown-R', this.toggleOrientation, this); // Handle 'R' key for rotation
         this.input.keyboard.on('keydown-ENTER', this.confirmShipPlacement, this); // Handle 'ENTER' key for confirming ship placement
+
+        // Creating masks for player grids
+        this.player1Mask = this.add.graphics().setVisible(false).setDepth(1); // Set depth to 1
+        this.player1Mask.fillStyle(0x000000);
+        this.player1Mask.fillRect(0, 0, 650, 650);
+
+        this.player2Mask = this.add.graphics().setVisible(false).setDepth(1); // Set depth to 1
+        this.player2Mask.fillStyle(0x000000);
+        this.player2Mask.fillRect(650, 25, 650, 650);
+
+        // Applying masks to grids
+        this.grid1.setMask(this.player1Mask.createGeometryMask());
+        this.grid2.setMask(this.player2Mask.createGeometryMask());
     }
 
     update() {
@@ -207,6 +222,15 @@ class PlayScene extends Phaser.Scene {
         this.gameStarted = true;
         this.currentPlayer = 1; // Player 1 starts the game
         alert("Player 1 starts the game. Drop a bomb on Player 2's grid.");
+
+        // Update masks to reveal current player's grid and hide opponent's grid
+        if (this.currentPlayer === 1) {
+            this.player1Mask.setVisible(false);
+            this.player2Mask.setVisible(true);
+        } else {
+            this.player1Mask.setVisible(true);
+            this.player2Mask.setVisible(false);
+        }
     }
 
     dropBomb(offsetX, gridX, gridY) {
@@ -294,6 +318,14 @@ class PlayScene extends Phaser.Scene {
             alert(`Player ${this.currentPlayer} missed!`);
             this.currentPlayer = playerToAttack; // Switch turns
             alert(`It's Player ${this.currentPlayer}'s turn to drop bombs.`);
+        }
+
+        if (this.currentPlayer === 1) {
+            this.player1Mask.setVisible(false);
+            this.player2Mask.setVisible(true);
+        } else {
+            this.player1Mask.setVisible(true);
+            this.player2Mask.setVisible(false);
         }
     }
 }
