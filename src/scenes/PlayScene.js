@@ -14,7 +14,10 @@ class PlayScene extends Phaser.Scene {
         this.useVerticalTorpedo = false; // Flag to indicate vertical torpedo use
         this.useMegaTorpedo = false; // Flag to indicate mega torpedo use
         this.useTorpedoX = false; // Flag to indicate torpedo X use
+    
+        this.hits = {1: 0, 2: 0}; // Track hits for both players
     }
+    
 
     preload() {
         this.load.image("ship1", "./assets/5x1_ship.png");
@@ -237,7 +240,7 @@ class PlayScene extends Phaser.Scene {
         let playerToAttack = this.currentPlayer === 1 ? 2 : 1;
         let gridToCheck = this.shipPlacements[playerToAttack];
         let hit = false;
-
+    
         const dropBombOnCell = (x, y) => {
             let hitInCurrentCell = false;
             for (let ship of gridToCheck) {
@@ -251,7 +254,7 @@ class PlayScene extends Phaser.Scene {
                         shipCells.push({ x: ship.x, y: ship.y + i });
                     }
                 }
-
+    
                 for (let cell of shipCells) {
                     if (cell.x === x && cell.y === y) {
                         hit = true;
@@ -259,21 +262,22 @@ class PlayScene extends Phaser.Scene {
                         break;
                     }
                 }
-
+    
                 if (hitInCurrentCell) break;
             }
-
+    
             let cellSize = 60;
             let bombX = offsetX + x * cellSize;
             let bombY = 50 + y * cellSize; // Fixed offsetY for both grids
-
+    
             if (hitInCurrentCell) {
                 this.add.rectangle(bombX, bombY, cellSize, cellSize, 0xff0000).setStrokeStyle(2, 0x000000, 1);
+                this.hits[this.currentPlayer]++;
             } else {
                 this.add.rectangle(bombX, bombY, cellSize, cellSize, 0xffa500).setStrokeStyle(2, 0x000000, 1);
             }
         };
-
+    
         if (this.useTorpedo) {
             for (let i = 0; i < 10; i++) {
                 dropBombOnCell(i, gridY);
@@ -311,7 +315,7 @@ class PlayScene extends Phaser.Scene {
         } else {
             dropBombOnCell(gridX, gridY);
         }
-
+    
         if (hit) {
             alert(`Player ${this.currentPlayer} hit a ship! They get to go again.`);
         } else {
@@ -319,13 +323,19 @@ class PlayScene extends Phaser.Scene {
             this.currentPlayer = playerToAttack; // Switch turns
             alert(`It's Player ${this.currentPlayer}'s turn to drop bombs.`);
         }
-
-        if (this.currentPlayer === 1) {
-            this.player1Mask.setVisible(false);
-            this.player2Mask.setVisible(true);
+    
+        // Check if game is over
+        if (this.hits[this.currentPlayer] >= 17) {
+            this.scene.start('GameOverScene', { winner: this.currentPlayer });
         } else {
-            this.player1Mask.setVisible(true);
-            this.player2Mask.setVisible(false);
+            if (this.currentPlayer === 1) {
+                this.player1Mask.setVisible(false);
+                this.player2Mask.setVisible(true);
+            } else {
+                this.player1Mask.setVisible(true);
+                this.player2Mask.setVisible(false);
+            }
         }
     }
+    
 }

@@ -10,11 +10,12 @@ class MenuScene extends Phaser.Scene {
 
     create() {
         //display background image
-        this.backgroundImage = this.add.tileSprite(0, 0, 1290, 650, "menuBG").setOrigin(0, 0);
-
+        this.backgroundImage = this.add.image(0, -50, "menuBG").setOrigin(0, 0).setDisplaySize(this.sys.game.config.width, this.sys.game.config.height);
+    
         //create play scene transition
         this.transitionToPlay = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     }
+    
 
     update()
     {
